@@ -4,3 +4,4 @@ bank-api
 .idea/
 .vscode/
 .env
+*.save
