@@ -1,0 +1,6 @@
+bank-api
+*.exe
+.DS_Store
+.idea/
+.vscode/
+.env
