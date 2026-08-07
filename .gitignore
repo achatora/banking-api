@@ -5,3 +5,4 @@ bank-api
 .vscode/
 .env
 *.save
+*.env
