@@ -41,7 +41,6 @@ func main() {
 
 	if err := db.Ping(context.Background()); err != nil {
 		fmt.Println("Failed to ping database:", err)
-		return
 	}
 
 	r := router.New()
