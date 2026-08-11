@@ -46,6 +46,7 @@ func main() {
 	r := router.New()
 	r.Handle("/", middleware.Logging(handlers.HandleHome))
 	r.Handle("/health", middleware.Logging(handlers.HandleHealth(db)))
+	r.Handle("/register", middleware.Logging(handlers.HandleRegister()))
 
 	fmt.Printf("Server starting on: %s\n", cfg.Port)
 	http.ListenAndServe(":"+cfg.Port, r)
