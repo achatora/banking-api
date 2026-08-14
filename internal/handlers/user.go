@@ -3,12 +3,13 @@ package handlers
 import (
 	"banking-api/internal/models"
 	"banking-api/internal/password"
+	"banking-api/internal/repository"
 	"banking-api/internal/validator"
 	"encoding/json"
 	"net/http"
 )
 
-func HandleRegister() http.HandlerFunc {
+func HandleRegister(userRepo *repository.UserRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			w.Header().Set("Content-Type", "application/json")
@@ -40,7 +41,19 @@ func HandleRegister() http.HandlerFunc {
 			return
 		}
 
-		_ = hashed
+		user := &models.User{
+			Email:        req.Email,
+			PasswordHash: hashed,
+			FirstName:    req.FirstName,
+			LastName:     req.LastName,
+		}
+
+		if err := userRepo.Create(r.Context(), user); err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(`{"error":"failed to create user"}`))
+			return
+		}
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)

@@ -9,6 +9,7 @@ import (
 	"banking-api/internal/database"
 	"banking-api/internal/handlers"
 	"banking-api/internal/middleware"
+	"banking-api/internal/repository"
 	"banking-api/internal/router"
 
 	"github.com/joho/godotenv"
@@ -43,10 +44,12 @@ func main() {
 		fmt.Println("Failed to ping database:", err)
 	}
 
+	userRepo := repository.NewUserRepository(db.Pool)
+
 	r := router.New()
 	r.Handle("/", middleware.Logging(handlers.HandleHome))
 	r.Handle("/health", middleware.Logging(handlers.HandleHealth(db)))
-	r.Handle("/register", middleware.Logging(handlers.HandleRegister()))
+	r.Handle("/register", middleware.Logging(handlers.HandleRegister(userRepo)))
 
 	fmt.Printf("Server starting on: %s\n", cfg.Port)
 	http.ListenAndServe(":"+cfg.Port, r)
