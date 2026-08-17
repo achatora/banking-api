@@ -10,6 +10,7 @@ import (
 )
 
 func HandleRegister(userRepo *repository.UserRepository) http.HandlerFunc {
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			w.Header().Set("Content-Type", "application/json")
@@ -18,6 +19,7 @@ func HandleRegister(userRepo *repository.UserRepository) http.HandlerFunc {
 			return
 		}
 
+		// Bind our data from request body
 		var req models.RegisterRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			w.Header().Set("Content-Type", "application/json")
@@ -33,6 +35,23 @@ func HandleRegister(userRepo *repository.UserRepository) http.HandlerFunc {
 			return
 		}
 
+		// Check if email already exists
+		existing, err := userRepo.GetByEmail(r.Context(), req.Email)
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(`{"error":"failed to check email"}`))
+			return
+		}
+
+		if existing != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusConflict)
+			w.Write([]byte(`{"error":"email already exists"}`))
+			return
+		}
+
+		// password hashing
 		hashed, err := password.Hash(req.Password)
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")
@@ -41,6 +60,7 @@ func HandleRegister(userRepo *repository.UserRepository) http.HandlerFunc {
 			return
 		}
 
+		// Sruct with data from context
 		user := &models.User{
 			Email:        req.Email,
 			PasswordHash: hashed,
@@ -48,6 +68,7 @@ func HandleRegister(userRepo *repository.UserRepository) http.HandlerFunc {
 			LastName:     req.LastName,
 		}
 
+		// Handle erorr if not nil when creating user
 		if err := userRepo.Create(r.Context(), user); err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusInternalServerError)
