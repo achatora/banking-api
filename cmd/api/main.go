@@ -50,6 +50,7 @@ func main() {
 	r.Handle("/", middleware.Logging(handlers.HandleHome))
 	r.Handle("/health", middleware.Logging(handlers.HandleHealth(db)))
 	r.Handle("/register", middleware.Logging(handlers.HandleRegister(userRepo)))
+	r.Handle("/login", middleware.Logging(handlers.HandleLogin(userRepo, cfg)))
 
 	fmt.Printf("Server starting on: %s\n", cfg.Port)
 	http.ListenAndServe(":"+cfg.Port, r)
