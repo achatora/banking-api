@@ -88,6 +88,8 @@ func HandleRegister(userRepo *repository.UserRepository) http.HandlerFunc {
 func HandleLogin(userRepo *repository.UserRepository, cfg *config.Config) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
+
+		// Mehtod Post
 		if r.Method != http.MethodPost {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusMethodNotAllowed)
@@ -95,6 +97,7 @@ func HandleLogin(userRepo *repository.UserRepository, cfg *config.Config) http.H
 			return
 		}
 
+		// Bind data and decode into req struct
 		var req models.LoginRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			w.Header().Set("Content-Type", "application/json")
@@ -103,6 +106,7 @@ func HandleLogin(userRepo *repository.UserRepository, cfg *config.Config) http.H
 			return
 		}
 
+		// Validate the data
 		if err := validator.Validate.Struct(req); err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
@@ -110,6 +114,7 @@ func HandleLogin(userRepo *repository.UserRepository, cfg *config.Config) http.H
 			return
 		}
 
+		// Check if account exists and handle error
 		user, err := userRepo.GetByEmail(r.Context(), req.Email)
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")
@@ -125,6 +130,7 @@ func HandleLogin(userRepo *repository.UserRepository, cfg *config.Config) http.H
 			return
 		}
 
+		// Comapare login password to hash
 		if err := password.Compare(user.PasswordHash, req.Password); err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusUnauthorized)
@@ -132,6 +138,7 @@ func HandleLogin(userRepo *repository.UserRepository, cfg *config.Config) http.H
 			return
 		}
 
+		// Create jwt token
 		token, err := auth.GenerateJWT(user.UserID, user.Email, cfg.JWTSecret)
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")
@@ -140,6 +147,7 @@ func HandleLogin(userRepo *repository.UserRepository, cfg *config.Config) http.H
 			return
 		}
 
+		// return token
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]string{
