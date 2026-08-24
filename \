@@ -40,8 +40,7 @@ func main() {
 	}
 	defer db.Close()
 
-	if err := db.Ping(context.Background()); err != nil {
-		fmt.Println("Warning: Database not reachable at startup")
+		fmt.Println("Failed to ping database:", err)
 	}
 
 	userRepo := repository.NewUserRepository(db.Pool)
@@ -56,4 +55,3 @@ func main() {
 	fmt.Printf("Server starting on: %s\n", cfg.Port)
 	http.ListenAndServe(":"+cfg.Port, r)
 }
-

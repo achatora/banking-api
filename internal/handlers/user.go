@@ -3,6 +3,7 @@ package handlers
 import (
 	"banking-api/internal/auth"
 	"banking-api/internal/config"
+	"banking-api/internal/middleware"
 	"banking-api/internal/models"
 	"banking-api/internal/password"
 	"banking-api/internal/repository"
@@ -153,5 +154,41 @@ func HandleLogin(userRepo *repository.UserRepository, cfg *config.Config) http.H
 		json.NewEncoder(w).Encode(map[string]string{
 			"token": token,
 		})
+	}
+}
+
+func HandleProfile(userRepo *repository.UserRepository) http.HandlerFunc {
+
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		// Get user ID from context (set by auth middleware)
+		userID, ok := middleware.GetUserID(r.Context())
+		if !ok {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
+			w.Write([]byte(`{"error":"unauthorized"}`))
+			return
+		}
+
+		// Get user from database
+		user, err := userRepo.GetByID(r.Context(), userID)
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(`{"error":"failed to get user"}`))
+			return
+		}
+
+		if user == nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte(`{"error":"user not found"}`))
+			return
+		}
+
+		// Return user data (password hash is hidden by json: "-")
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(user)
 	}
 }
