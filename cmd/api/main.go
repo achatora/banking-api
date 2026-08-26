@@ -56,4 +56,3 @@ func main() {
 	fmt.Printf("Server starting on: %s\n", cfg.Port)
 	http.ListenAndServe(":"+cfg.Port, r)
 }
-
