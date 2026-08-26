@@ -7,6 +7,7 @@ import (
 
 	"banking-api/internal/models"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -18,6 +19,7 @@ func NewAccountRepository(db *pgxpool.Pool) *AccountRepository {
 	return &AccountRepository{db: db}
 }
 
+// Store user's bank account to database
 func (r *AccountRepository) Create(ctx context.Context, account *models.Account) error {
 	query := `
 	INSERT INTO accounts (user_id, account_number, account_type, balance, status, created_at, updated_at)
@@ -48,6 +50,7 @@ func (r *AccountRepository) Create(ctx context.Context, account *models.Account)
 	return nil
 }
 
+// Get all user's bank accounts by ID
 func (r *AccountRepository) GetByUserID(ctx context.Context, userID int64) ([]models.Account, error) {
 	query := `
 	SELECT account_id, user_id, account_number, account_type, balance, status, created_at, updated_at
@@ -89,17 +92,19 @@ func (r *AccountRepository) GetByUserID(ctx context.Context, userID int64) ([]mo
 	return accounts, nil
 }
 
+// Get user's bank acount by ID
 func (r *AccountRepository) GetByID(ctx context.Context, accountID int64) (*models.Account, error) {
 	query := `
 	SELECT account_id, user_id, account_number, account_type, balance, status, created_at, updated_at
 	FROM accounts
 	WHERE account_id = $1
 	`
+
 	var account models.Account
 	err := r.db.QueryRow(
 		ctx,
 		query,
-		account.AccountID,
+		accountID,
 	).Scan(
 		&account.AccountID,
 		&account.UserID,
@@ -110,8 +115,13 @@ func (r *AccountRepository) GetByID(ctx context.Context, accountID int64) (*mode
 		&account.CreatedAt,
 		&account.UpdatedAt,
 	)
+
+	if err == pgx.ErrNoRows {
+		return nil, nil
+	}
+
 	if err != nil {
-		return nil, fmt.Errorf("failed to get account id: %w", err)
+		return nil, fmt.Errorf("failed to get account by ID: %w", err)
 	}
 
 	return &account, nil
