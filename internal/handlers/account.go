@@ -15,6 +15,7 @@ func HandleCreateAccount(accountRepo *repository.AccountRepository) http.Handler
 
 	return func(w http.ResponseWriter, r *http.Request) {
 
+		// Only Post method allowed
 		if r.Method != http.MethodPost {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusMethodNotAllowed)
@@ -22,6 +23,7 @@ func HandleCreateAccount(accountRepo *repository.AccountRepository) http.Handler
 			return
 		}
 
+		// Get userID from (middleware) Context
 		userID, ok := middleware.GetUserID(r.Context())
 		if !ok {
 			w.Header().Set("Content-Type", "application/json")
@@ -30,6 +32,7 @@ func HandleCreateAccount(accountRepo *repository.AccountRepository) http.Handler
 			return
 		}
 
+		// Bind the data from Context
 		var req models.CreateAccountRequest
 		err := json.NewDecoder(r.Body).Decode(&req)
 		if err != nil {
@@ -39,6 +42,7 @@ func HandleCreateAccount(accountRepo *repository.AccountRepository) http.Handler
 			return
 		}
 
+		// Validate data
 		if err := validator.Validate.Struct(req); err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
@@ -46,8 +50,10 @@ func HandleCreateAccount(accountRepo *repository.AccountRepository) http.Handler
 			return
 		}
 
+		// Create unique bank account number
 		accountNumber := fmt.Sprintf("ACC-%d", time.Now().UnixNano())
 
+		// Create account
 		account := &models.Account{
 			UserID:        userID,
 			AccountNumber: accountNumber,
@@ -56,6 +62,7 @@ func HandleCreateAccount(accountRepo *repository.AccountRepository) http.Handler
 			Status:        "active",
 		}
 
+		// Save account to database
 		err = accountRepo.Create(r.Context(), account)
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")
@@ -64,6 +71,7 @@ func HandleCreateAccount(accountRepo *repository.AccountRepository) http.Handler
 			return
 		}
 
+		// Return the account
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 		json.NewEncoder(w).Encode(account)

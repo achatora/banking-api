@@ -45,6 +45,7 @@ func main() {
 	}
 
 	userRepo := repository.NewUserRepository(db.Pool)
+	accountRepo := repository.NewAccountRepository(db.Pool)
 
 	r := router.New()
 	r.Handle("/", middleware.Logging(handlers.HandleHome))
@@ -52,6 +53,7 @@ func main() {
 	r.Handle("/register", middleware.Logging(handlers.HandleRegister(userRepo)))
 	r.Handle("/login", middleware.Logging(handlers.HandleLogin(userRepo, cfg)))
 	r.Handle("/profile", middleware.Logging(middleware.Auth(cfg.JWTSecret)(handlers.HandleProfile(userRepo))))
+	r.Handle("/accounts", middleware.Logging(middleware.Auth(cfg.JWTSecret)(handlers.HandleCreateAccount(accountRepo))))
 
 	fmt.Printf("Server starting on: %s\n", cfg.Port)
 	http.ListenAndServe(":"+cfg.Port, r)
