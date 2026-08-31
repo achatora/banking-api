@@ -8,9 +8,9 @@ import (
 	"banking-api/internal/password"
 	"banking-api/internal/repository"
 	"banking-api/internal/validator"
-
 	"encoding/json"
 	"net/http"
+	"strconv"
 )
 
 func HandleRegister(userRepo *repository.UserRepository) http.HandlerFunc {
@@ -190,5 +190,62 @@ func HandleProfile(userRepo *repository.UserRepository) http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(user)
+	}
+}
+
+func HandleGetAccountByID(accountRepo *repository.AccountRepository) http.HandlerFunc {
+
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		if r.Method != http.MethodGet {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			w.Write([]byte(`{"error":"method not allowed"}`))
+			return
+		}
+
+		userID, ok := middleware.GetUserID(r.Context())
+		if !ok {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
+			w.Write([]byte(`{"error":"unauthorized"}`))
+			return
+		}
+
+		idStr := r.URL.Query().Get("id")
+
+		id, err := strconv.ParseInt(idStr, 10, 64)
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(`{"error":"invalid request format"}`))
+			return
+		}
+
+		account, err := accountRepo.GetByID(r.Context(), id)
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(`{"error":"could not get account"}`))
+			return
+		}
+
+		if account == nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte(`{"error":"account not found"}`))
+			return
+		}
+
+		if account.UserID != userID {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusForbidden)
+			w.Write([]byte(`{"error":"forbidden"}`))
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(account)
 	}
 }
