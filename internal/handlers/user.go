@@ -197,6 +197,7 @@ func HandleGetAccountByID(accountRepo *repository.AccountRepository) http.Handle
 
 	return func(w http.ResponseWriter, r *http.Request) {
 
+		// GET Method
 		if r.Method != http.MethodGet {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusMethodNotAllowed)
@@ -204,6 +205,7 @@ func HandleGetAccountByID(accountRepo *repository.AccountRepository) http.Handle
 			return
 		}
 
+		// Get userID from middleware context
 		userID, ok := middleware.GetUserID(r.Context())
 		if !ok {
 			w.Header().Set("Content-Type", "application/json")
@@ -212,8 +214,10 @@ func HandleGetAccountByID(accountRepo *repository.AccountRepository) http.Handle
 			return
 		}
 
+		// Query url for "id"
 		idStr := r.URL.Query().Get("id")
 
+		// Convert idStr to int64
 		id, err := strconv.ParseInt(idStr, 10, 64)
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")
@@ -222,6 +226,7 @@ func HandleGetAccountByID(accountRepo *repository.AccountRepository) http.Handle
 			return
 		}
 
+		// Get account ID from database
 		account, err := accountRepo.GetByID(r.Context(), id)
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")
@@ -230,6 +235,7 @@ func HandleGetAccountByID(accountRepo *repository.AccountRepository) http.Handle
 			return
 		}
 
+		// If no account is found
 		if account == nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusNotFound)
@@ -237,6 +243,7 @@ func HandleGetAccountByID(accountRepo *repository.AccountRepository) http.Handle
 			return
 		}
 
+		// Verify userID
 		if account.UserID != userID {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusForbidden)
@@ -244,6 +251,7 @@ func HandleGetAccountByID(accountRepo *repository.AccountRepository) http.Handle
 			return
 		}
 
+		// return account
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(account)
