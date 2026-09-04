@@ -56,6 +56,7 @@ func main() {
 	r.Handle("/profile", middleware.Logging(middleware.Auth(cfg.JWTSecret)(handlers.HandleProfile(userRepo))))
 	r.Handle("/accounts", middleware.Logging(middleware.Auth(cfg.JWTSecret)(handlers.HandleAccounts(accountRepo))))
 	r.Handle("/deposit", middleware.Logging(middleware.Auth(cfg.JWTSecret)(handlers.HandleDeposit(accountRepo, transactionRepo))))
+	r.Handle("/withdraw", middleware.Logging(middleware.Auth(cfg.JWTSecret)(handlers.HandleWithdraw(accountRepo, transactionRepo))))
 
 	fmt.Printf("Server starting on: %s\n", cfg.Port)
 	http.ListenAndServe(":"+cfg.Port, r)

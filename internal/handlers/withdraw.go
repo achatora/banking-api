@@ -7,16 +7,16 @@ import (
 	"banking-api/internal/validator"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
 )
 
-func HandleDeposit(accountRepo *repository.AccountRepository, transactionRepo *repository.TransactionRepository) http.HandlerFunc {
+func HandleWithdraw(accountRepo *repository.AccountRepository, transactionRepo *repository.TransactionRepository) http.HandlerFunc {
 
+	// POST Method
 	return func(w http.ResponseWriter, r *http.Request) {
-
-		// POST Method
 		if r.Method != http.MethodPost {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusMethodNotAllowed)
@@ -24,16 +24,17 @@ func HandleDeposit(accountRepo *repository.AccountRepository, transactionRepo *r
 			return
 		}
 
-		// Get userID from Context
+		// Get userID from middleware Context
 		userID, ok := middleware.GetUserID(r.Context())
 		if !ok {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte(`{"error":"unauthorized"}`))
+			w.Write([]byte(`{"error":"no authorized"}`))
 			return
+
 		}
 
-		// Get accountID from URL Query
+		// Get account ID from URL Query
 		accountIDStr := r.URL.Query().Get("account_id")
 		accountID, err := strconv.ParseInt(accountIDStr, 10, 64)
 		if err != nil {
@@ -43,8 +44,8 @@ func HandleDeposit(accountRepo *repository.AccountRepository, transactionRepo *r
 			return
 		}
 
-		// Bind data from request and parse to req struct
-		var req models.DepositRequest
+		// Bind data and parse to req struct
+		var req models.WithdrawRequest
 		err = json.NewDecoder(r.Body).Decode(&req)
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")
@@ -53,7 +54,7 @@ func HandleDeposit(accountRepo *repository.AccountRepository, transactionRepo *r
 			return
 		}
 
-		// Validate the data
+		// Validate data
 		if err := validator.Validate.Struct(req); err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
@@ -61,12 +62,12 @@ func HandleDeposit(accountRepo *repository.AccountRepository, transactionRepo *r
 			return
 		}
 
-		// Get account from database by it's ID
+		// Get account from database by user's ID
 		account, err := accountRepo.GetByID(r.Context(), accountID)
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(`{"error":"failed to get account id"}`))
+			w.Write([]byte(`{"error":"could not get account"}`))
 			return
 		}
 
@@ -78,31 +79,39 @@ func HandleDeposit(accountRepo *repository.AccountRepository, transactionRepo *r
 			return
 		}
 
-		// Calculate nee balance after deposit
-		newBalance := account.Balance + req.Amount
+		// Balance check
+		if account.Balance < req.Amount {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(`{"error":"low account balance, cannot withdraw"}`))
+			return
+		}
 
-		// Update the account balance after deposit
+		// Withdraw ammount from balance
+		newBalance := account.Balance - req.Amount
+
+		// Update balance in database
 		err = accountRepo.UpdateBalance(r.Context(), accountID, newBalance)
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(`{"error":"failed to update balance"}`))
+			w.Write([]byte(`{"error":"failed to update account balance"}`))
 			return
 		}
 
-		// Create instance for transaction
 		transaction := models.Transaction{
 			AccountID:    accountID,
-			Type:         "deposit",
+			Type:         "withdrawal",
 			Amount:       req.Amount,
 			BalanceAfter: newBalance,
 			Description:  req.Description,
-			Reference:    fmt.Sprintf("DEP-%d-%d", accountID, time.Now().UnixNano()),
+			Reference:    fmt.Sprintf("WTH-%d-%d", userID, time.Now().UnixNano()),
 		}
 
-		// Create transaction
+		// Create transaction record in database (transaction history)
 		err = transactionRepo.Create(r.Context(), &transaction)
 		if err != nil {
+			log.Printf("transaction record failed: %v", err)
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(`{"error":"failed to create transaction record"}`))
@@ -112,10 +121,11 @@ func HandleDeposit(accountRepo *repository.AccountRepository, transactionRepo *r
 		// Update account balance in struct
 		account.Balance = newBalance
 
+		// Return data
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"message":     "deposit successful",
+			"message":     "withdrawal successful",
 			"account":     account,
 			"transaction": transaction,
 		})

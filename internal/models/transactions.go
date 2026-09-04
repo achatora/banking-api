@@ -17,3 +17,8 @@ type DepositRequest struct {
 	Amount      int64  `json:"amount" validate:"required,gt=0"`
 	Description string `json:"description,omitempty"`
 }
+
+type WithdrawRequest struct {
+	Amount      int64  `json:"amount" validate:"required,gt=0"`
+	Description string `json:"description,omitempty"`
+}
