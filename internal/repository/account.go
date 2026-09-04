@@ -126,3 +126,18 @@ func (r *AccountRepository) GetByID(ctx context.Context, accountID int64) (*mode
 
 	return &account, nil
 }
+
+func (r *AccountRepository) UpdateBalance(ctx context.Context, accountID int64, newBalance int64) error {
+	query := `
+	UPDATE accounts
+	SET balance = $1, updated_at = $2
+	WHERE account_id = $3
+	`
+
+	_, err := r.db.Exec(ctx, query, newBalance, time.Now(), accountID)
+	if err != nil {
+		return fmt.Errorf("failed to update balance: %w", err)
+	}
+
+	return nil
+}

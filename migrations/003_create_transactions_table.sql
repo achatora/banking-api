@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS transactions (
-  transactions_id BIGSERIAL PRIMARY KEY,
+  transaction_id BIGSERIAL PRIMARY KEY,
   account_id BIGINT NOT NULL REFERENCES accounts(account_id) ON DELETE CASCADE,
   type VARCHAR(20) NOT NULL CHECK (type IN ('deposit', 'withdrawal', 'transfer')),
   amount BIGINT NOT NULL,

@@ -25,19 +25,17 @@ func (r *TransactionRepository) Create(ctx context.Context, transaction *models.
 	`
 	now := time.Now()
 
-	var req models.Transaction
 	err := r.db.QueryRow(
 		ctx,
 		query,
-		req.AccountID,
-		req.Type,
-		req.Amount,
-		req.BalanceAfter,
-		req.Description,
-		req.Reference,
-		req.Reference,
+		transaction.AccountID,
+		transaction.Type,
+		transaction.Amount,
+		transaction.BalanceAfter,
+		transaction.Description,
+		transaction.Reference,
 		now,
-	).Scan(&req.TransactionID)
+	).Scan(&transaction.TransactionID)
 
 	if err != nil {
 		return fmt.Errorf("failed to create transaction: %w", err)
